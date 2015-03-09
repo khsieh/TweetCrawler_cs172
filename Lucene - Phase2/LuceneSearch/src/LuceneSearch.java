@@ -46,7 +46,7 @@ class WebDocument {
 }
 
 public class LuceneSearch{
-	public static final int MAX_FILE_COUNT = 1;
+	public static final int MAX_FILE_COUNT = 10;
 	public static final String INDEX_DIR = "Index";
 	public static void main(String[] args) throws CorruptIndexException, IOException, ParseException {
 		//get input from file and make page entries
@@ -57,23 +57,31 @@ public class LuceneSearch{
 	}
 	
 	public static void getFile () throws FileNotFoundException, ParseException{
-		for(int i = 1; i <= MAX_FILE_COUNT; i++){
+		for(int i = 5; i <= MAX_FILE_COUNT; i++){
 			try{
-				File file = new File("D:\\Java Workspace\\LuceneSearch\\file" + i + ".txt");
+				System.out.println(i);
+				File file = new File("C:\\Users\\Cloud_Nine\\Desktop\\New\\file" + i + ".txt");
 				FileReader fileReader = new FileReader(file);
 				BufferedReader buff = new BufferedReader(fileReader);
 //				StringBuffer strBuff = new StringBuffer();
 				String line ="";
 				while ((line = buff.readLine() ) != null){
-					String User = line.substring(line.indexOf("User")+7, line.indexOf("Time")-3);
-					String Time = line.substring(line.indexOf("Time")+6, line.indexOf("Tweet")-2);
-					String Tweet = line.substring(line.indexOf("Tweet")+8, line.indexOf("LinkUrl")-3);
-					String LinkUrl = line.substring(line.indexOf("LinkUrl")+9, line.indexOf("LinkTitle")-2);
-					String LinkTitle = line.substring(line.indexOf("LinkTitle")+11, line.indexOf("Geo")-2);
-					String Geo = line.substring(line.indexOf("Geo")+5, line.length()-1);
+
+//					System.out.print("\n");
+//					System.out.print(line);
+//					System.out.print("\n");
+					String User = line.substring(line.indexOf("\"User\"")+8, line.indexOf("\"Time\"")-2);
+					String Time = line.substring(line.indexOf("\"Time\"")+7, line.indexOf("\"Tweet\"")-1);
+					String Tweet = line.substring(line.indexOf("\"Tweet\"")+9, line.indexOf("\"LinkUrl\"")-2);
+					String LinkUrl = line.substring(line.indexOf("\"LinkUrl\"")+10, line.indexOf("\"LinkTitle\"")-1);
+					String LinkTitle = line.substring(line.indexOf("\"LinkTitle\"")+12, line.indexOf("\"Geo\"")-1);
+					String Geo = line.substring(line.indexOf("\"Geo\"")+6, line.length()-1);
+//					System.out.print(User + " " + Time + " " + Tweet + " " + LinkUrl + " " + LinkTitle + " " + Geo);
+//					System.out.print("\n");
 					
 					WebDocument page = new WebDocument(User,Tweet,Time,LinkUrl,LinkTitle,Geo);
 					index(page);
+//					System.out.print("\n");
 //					System.out.println(page.tweet);
 				}
 
@@ -102,7 +110,8 @@ public class LuceneSearch{
 			luceneDoc.add(new Field("geo", page.geo, Field.Store.YES, Field.Index.ANALYZED,Field.TermVector.YES));
 			//write into lucene
 //			System.out.println(luceneDoc.get("tweet"));
-			writer.addDocument(luceneDoc);			
+			writer.addDocument(luceneDoc);
+//			System.out.print(luceneDoc.get("user") + " " + luceneDoc.get("time") + " " + luceneDoc.get("tweet") + " " + luceneDoc.get("url") + " " + luceneDoc.get("title") + " " + luceneDoc.get("geo"));			
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		} finally {
