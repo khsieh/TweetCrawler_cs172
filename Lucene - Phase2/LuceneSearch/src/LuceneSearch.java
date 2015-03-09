@@ -21,6 +21,7 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.TopScoreDocCollector;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.json.simple.parser.ParseException;
@@ -52,7 +53,7 @@ public class LuceneSearch{
 		//index all pages
 		//search per user query request
 		getFile(); // read from file and index it
-		search("coffee",5);
+		search("K",5);
 	}
 	
 	public static void getFile () throws FileNotFoundException, ParseException{
@@ -70,9 +71,10 @@ public class LuceneSearch{
 					String LinkUrl = line.substring(line.indexOf("LinkUrl")+9, line.indexOf("LinkTitle")-2);
 					String LinkTitle = line.substring(line.indexOf("LinkTitle")+11, line.indexOf("Geo")-2);
 					String Geo = line.substring(line.indexOf("Geo")+5, line.length()-1);
+					
 					WebDocument page = new WebDocument(User,Tweet,Time,LinkUrl,LinkTitle,Geo);
 					index(page);
-//					System.out.println(page.user);
+//					System.out.println(page.tweet);
 				}
 
 				fileReader.close();
@@ -99,7 +101,7 @@ public class LuceneSearch{
 			luceneDoc.add(new Field("title", page.title, Field.Store.YES, Field.Index.ANALYZED,Field.TermVector.YES));
 			luceneDoc.add(new Field("geo", page.geo, Field.Store.YES, Field.Index.ANALYZED,Field.TermVector.YES));
 			//write into lucene
-//			System.out.println(luceneDoc.get("user"));
+//			System.out.println(luceneDoc.get("tweet"));
 			writer.addDocument(luceneDoc);			
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -115,7 +117,7 @@ public class LuceneSearch{
 		}
 	}
 	
-	public static TopDocs search (String queryString, int topk) throws CorruptIndexException, IOException {
+	public static void search (String queryString, int topk) throws CorruptIndexException, IOException {
 		
 		IndexReader indexReader = IndexReader.open(FSDirectory.open(new File(INDEX_DIR)), true);
 		IndexSearcher indexSearcher = new IndexSearcher(indexReader);
@@ -127,40 +129,39 @@ public class LuceneSearch{
 			String querytoparse = "";
 			while(strtok.hasMoreElements()) {
 				String token = strtok.nextToken();
-				querytoparse += "user:" + token + "^1" + "tweet:" + token+ "^1.5";
+				querytoparse += "tweet:" + token + "^1" + "user:" + token+ "^1.5";
 				querytoparse += token + "\n";
 			}		
 			Query query = queryparser.parse(querytoparse); 
 		    System.out.println(query.toString());
 			
+//		    TopScoreDocCollector collector = TopScoreDocCollector.create(topk, true);
 		    TopDocs results = indexSearcher.search(query, topk);
+		    
 			System.out.println("Total Hits: " + results.totalHits);
 			System.out.println("Max Score: " + results.getMaxScore() + "\n");
 			
+//			ScoreDoc[] hits = collector.topDocs().scoreDocs;
 			ScoreDoc[] hits = results.scoreDocs;
 			for(int h = 0; h < topk; ++h){
-//				Field fieldEnum = .fields();
-//				while(fieldEnum.hasMoreElements()){
-//					Field field = (Field) fieldEnum.nextElement();
-//					String val = doc.get(field.name());
-//					System.out.println(field.name() + ": " + val);
-//				}
 				
 				System.out.println(hits[h].toString()); //doc id and score of each hit
 				//get tweet content
 				Document d = indexSearcher.doc(hits[h].doc);
-				System.out.println("Tweet: " + d.getFieldable("tweet"));
+				System.out.println("User: " + d.get("user") + "\tTweet: " + d.get("tweet")
+						 + "\tTime: " + d.get("time")/*d.getFieldable("tweet").stringValue()*/);
+				
 //				TermFreqVector t = indexReader.getTermFreqVector(hits[h].doc,"tweet");
 //				System.out.println(t);
 			}
-			return results;			
+			return;			
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
 			indexSearcher.close();
 			indexReader.close();
 		}
-		return null;
+		return ;
 	}
 	
 }
