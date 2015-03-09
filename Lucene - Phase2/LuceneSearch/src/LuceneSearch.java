@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 //import java.io.Reader;
 import java.io.IOException;
+import java.util.Enumeration;
 import java.util.StringTokenizer;
 
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -14,6 +15,7 @@ import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.TermFreqVector;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
@@ -50,7 +52,7 @@ public class LuceneSearch{
 		//index all pages
 		//search per user query request
 		getFile(); // read from file and index it
-		search("K",5);
+		search("coffee",5);
 	}
 	
 	public static void getFile () throws FileNotFoundException, ParseException{
@@ -91,7 +93,7 @@ public class LuceneSearch{
 			Document luceneDoc = new Document();
 			//get fields from page and insert into document
 			luceneDoc.add(new Field("user", page.user, Field.Store.YES, Field.Index.NOT_ANALYZED,Field.TermVector.YES));
-			luceneDoc.add(new Field("tweet", page.tweet, Field.Store.NO, Field.Index.ANALYZED,Field.TermVector.YES));
+			luceneDoc.add(new Field("tweet", page.tweet, Field.Store.YES, Field.Index.ANALYZED,Field.TermVector.YES));
 			luceneDoc.add(new Field("time", page.time, Field.Store.YES, Field.Index.ANALYZED,Field.TermVector.YES));
 			luceneDoc.add(new Field("url", page.url, Field.Store.YES, Field.Index.NOT_ANALYZED,Field.TermVector.YES));
 			luceneDoc.add(new Field("title", page.title, Field.Store.YES, Field.Index.ANALYZED,Field.TermVector.YES));
@@ -118,21 +120,39 @@ public class LuceneSearch{
 		IndexReader indexReader = IndexReader.open(FSDirectory.open(new File(INDEX_DIR)), true);
 		IndexSearcher indexSearcher = new IndexSearcher(indexReader);
 		
-		QueryParser queryparser = new QueryParser(Version.LUCENE_34, "", new StandardAnalyzer(Version.LUCENE_34));
+		QueryParser queryparser = new QueryParser(Version.LUCENE_34, "tweet", new StandardAnalyzer(Version.LUCENE_34));
 
 		try {
 			StringTokenizer strtok = new StringTokenizer(queryString, " ~`!#$%^&*()_-+={[}]|;'<>,./?\"\'\\/\n\t\b\f\r");
 			String querytoparse = "";
 			while(strtok.hasMoreElements()) {
 				String token = strtok.nextToken();
+				querytoparse += "user:" + token + "^1" + "tweet:" + token+ "^1.5";
 				querytoparse += token + "\n";
 			}		
 			Query query = queryparser.parse(querytoparse); 
 		    System.out.println(query.toString());
 			
 		    TopDocs results = indexSearcher.search(query, topk);
-			System.out.println(results.totalHits);
+			System.out.println("Total Hits: " + results.totalHits);
+			System.out.println("Max Score: " + results.getMaxScore() + "\n");
 			
+			ScoreDoc[] hits = results.scoreDocs;
+			for(int h = 0; h < topk; ++h){
+//				Field fieldEnum = .fields();
+//				while(fieldEnum.hasMoreElements()){
+//					Field field = (Field) fieldEnum.nextElement();
+//					String val = doc.get(field.name());
+//					System.out.println(field.name() + ": " + val);
+//				}
+				
+				System.out.println(hits[h].toString()); //doc id and score of each hit
+				//get tweet content
+				Document d = indexSearcher.doc(hits[h].doc);
+				System.out.println("Tweet: " + d.getFieldable("tweet"));
+//				TermFreqVector t = indexReader.getTermFreqVector(hits[h].doc,"tweet");
+//				System.out.println(t);
+			}
 			return results;			
 		} catch (Exception e) {
 			e.printStackTrace();
